@@ -1,0 +1,5 @@
+### Send default "Greeting" message
+GET http://localhost:8080/api/greeting
+
+### Send custom "Greeting" message
+GET http://localhost:8080/api/greeting?name=User

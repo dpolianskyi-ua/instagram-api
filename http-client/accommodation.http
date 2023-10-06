@@ -1,0 +1,35 @@
+### Create accommodation
+POST http://localhost:8080/api/v1/accommodations
+Content-Type: application/json
+
+{
+  "addressId": 123,
+  "personId": 456,
+  "accommodationDate": "2018-10-10",
+  "singleOwned": true
+}
+
+### Get accommodation by id
+GET http://localhost:8080/api/v1/accommodations/1
+Accept: application/json
+
+### Get all accommodations
+GET http://localhost:8080/api/v1/accommodations
+Accept: application/json
+
+### Update accommodation
+PUT http://localhost:8080/api/v1/accommodations/1
+Content-Type: application/json
+
+{
+  "addressId": 123,
+  "personId": 456,
+  "accommodationDate": "2018-10-10",
+  "singleOwned": true
+}
+
+### Delete accommodation
+DELETE http://localhost:8080/api/v1/accommodations/1
+Accept: application/json
+
+###
