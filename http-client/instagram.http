@@ -1,0 +1,15 @@
+### Login to Insta
+POST http://localhost:8080/api/v1/instagram
+Content-Type: application/json
+
+{
+  "username": "{{username}}",
+  "password": "{{password}}",
+  "inputCode": "{{inputCode}}"
+}
+
+### Get username (self)
+GET http://localhost:8080/api/v1/instagram/username
+Accept: application/json
+
+###
