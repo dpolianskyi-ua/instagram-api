@@ -1,5 +1,14 @@
-### Login to Insta
-POST http://localhost:8080/api/v1/instagram
+### Login to Insta (via Password)
+POST http://localhost:8080/api/v1/instagram/login
+Content-Type: application/json
+
+{
+  "username": "{{username}}",
+  "password": "{{password}}"
+}
+
+### Login to Insta (via 2FA)
+POST http://localhost:8080/api/v1/instagram/login/2fa
 Content-Type: application/json
 
 {
@@ -8,8 +17,20 @@ Content-Type: application/json
   "inputCode": "{{inputCode}}"
 }
 
-### Get username (self)
-GET http://localhost:8080/api/v1/instagram/username
+### Extract Profile Details
+GET http://localhost:8080/api/v1/instagram/extract/profile-details?username=lesnik.pro
+Accept: application/json
+
+### Extract Feed Details
+GET http://localhost:8080/api/v1/instagram/extract/feed-details?username=chernova_dian
+Accept: application/json
+
+### Extract Followers Details
+GET http://localhost:8080/api/v1/instagram/extract/followers-details?username=tatarova_olya&captured=true
+Accept: application/json
+
+### Extract Following Details
+GET http://localhost:8080/api/v1/instagram/extract/following-details?username=lesnik.pro
 Accept: application/json
 
 ###

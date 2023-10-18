@@ -14,13 +14,13 @@ import static org.springframework.security.config.Customizer.withDefaults;
 @EnableMethodSecurity
 public class WebSecurityConfig {
 
-    @Bean
-    @SneakyThrows
-    public SecurityFilterChain filterChain(HttpSecurity http) {
-        return http.authorizeHttpRequests((auth) -> auth.anyRequest().permitAll())
-                .httpBasic(withDefaults())
-                .csrf(AbstractHttpConfigurer::disable)
-                .cors(AbstractHttpConfigurer::disable)
-                .build();
-    }
+  @Bean
+  @SneakyThrows
+  public SecurityFilterChain filterChain(HttpSecurity http) {
+    return http.authorizeHttpRequests((auth) -> auth.anyRequest().permitAll())
+        .httpBasic(withDefaults())
+        .csrf(AbstractHttpConfigurer::disable)
+        .cors(AbstractHttpConfigurer::disable)
+        .build();
+  }
 }

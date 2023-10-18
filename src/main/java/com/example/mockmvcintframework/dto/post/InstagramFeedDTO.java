@@ -1,22 +1,18 @@
-package com.example.mockmvcintframework.dto;
+package com.example.mockmvcintframework.dto.post;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
 import lombok.Value;
 
+import java.util.List;
+
 import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
 
 @Value
 @Builder
 @JsonInclude(NON_NULL)
-public class InstagramCredentialsRequestDTO {
-  @JsonProperty("username")
-  String username;
-
-  @JsonProperty("password")
-  String password;
-
-  @JsonProperty("inputCode")
-  String inputCode;
+public class InstagramFeedDTO {
+  @JsonProperty("posts")
+  List<InstagramPostDTO> posts;
 }

@@ -1,4 +1,4 @@
-package com.example.mockmvcintframework.dto;
+package com.example.mockmvcintframework.dto.post.partial;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -10,13 +10,16 @@ import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
 @Value
 @Builder
 @JsonInclude(NON_NULL)
-public class InstagramCredentialsRequestDTO {
-  @JsonProperty("username")
-  String username;
+public class ImagePostDetailsDTO {
+  @JsonProperty("width")
+  Integer width;
 
-  @JsonProperty("password")
-  String password;
+  @JsonProperty("height")
+  Integer height;
 
-  @JsonProperty("inputCode")
-  String inputCode;
+  @JsonProperty("url")
+  String url;
+
+  @JsonProperty("viewCount")
+  Integer viewCount;
 }

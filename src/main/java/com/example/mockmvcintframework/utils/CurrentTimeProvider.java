@@ -11,30 +11,30 @@ import java.util.Optional;
 import java.util.TimeZone;
 
 public class CurrentTimeProvider implements DateTimeProvider {
-    public static final ZoneId EST = TimeZone.getTimeZone("EST").toZoneId();
+  public static final ZoneId EST = TimeZone.getTimeZone("EST").toZoneId();
 
-    public CurrentTimeProvider() {
-        TimeZone.setDefault(TimeZone.getTimeZone(EST));
-    }
+  public CurrentTimeProvider() {
+    TimeZone.setDefault(TimeZone.getTimeZone(EST));
+  }
 
-    public LocalDateTime getLocalDateTime() {
-        return LocalDateTime.now();
-    }
+  public LocalDateTime getLocalDateTime() {
+    return LocalDateTime.now();
+  }
 
-    public LocalDate getLocalDate() {
-        return LocalDate.now();
-    }
+  public LocalDate getLocalDate() {
+    return LocalDate.now();
+  }
 
-    public LocalDateTime getDefaultHistoryStartDate() {
-        return getLocalDateTime().minusDays(90);
-    }
+  public LocalDateTime getDefaultHistoryStartDate() {
+    return getLocalDateTime().minusDays(90);
+  }
 
-    public LocalDateTime getDefaultHistoryEndDate() {
-        return getLocalDateTime();
-    }
+  public LocalDateTime getDefaultHistoryEndDate() {
+    return getLocalDateTime();
+  }
 
-    @Override
-    public Optional<TemporalAccessor> getNow() {
-        return Optional.of(ZonedDateTime.of(getLocalDateTime(), ZoneId.systemDefault()));
-    }
+  @Override
+  public Optional<TemporalAccessor> getNow() {
+    return Optional.of(ZonedDateTime.of(getLocalDateTime(), ZoneId.systemDefault()));
+  }
 }
