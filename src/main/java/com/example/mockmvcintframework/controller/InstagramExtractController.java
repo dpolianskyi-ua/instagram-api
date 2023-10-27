@@ -1,16 +1,17 @@
 package com.example.mockmvcintframework.controller;
 
+import static org.springframework.http.ResponseEntity.*;
+
 import com.example.mockmvcintframework.dto.post.InstagramFeedDTO;
 import com.example.mockmvcintframework.dto.profile.InstagramProfileDTO;
 import com.example.mockmvcintframework.service.InstagramService;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/instagram/extract")
@@ -22,25 +23,31 @@ public class InstagramExtractController {
   @GetMapping("/profile-details")
   public ResponseEntity<InstagramProfileDTO> extractProfileDetailsByUsername(
       @RequestParam(value = "username") String username) {
-    return ResponseEntity.ok(instagramService.extractProfileDetails(username));
+    return ok(instagramService.extractProfileDetails(username));
   }
 
   @GetMapping("/feed-details")
   public ResponseEntity<InstagramFeedDTO> extractFeedDetailsByUsername(
-      @RequestParam(value = "username") String username) {
-    return ResponseEntity.ok(instagramService.extractFeedDetails(username));
+      @RequestParam(value = "username") String username,
+      @RequestParam(value = "nextMaxId", required = false) String nextMaxId,
+      @RequestParam(value = "timeout", defaultValue = "60", required = false) Integer timeout,
+      @RequestParam(value = "rounds", defaultValue = "5", required = false) Integer rounds) {
+    return ok(instagramService.extractFeedDetails(username, nextMaxId, timeout, rounds));
   }
 
   @GetMapping("/followers-details")
   public ResponseEntity<List<InstagramProfileDTO>> extractFollowersDetailsByUsername(
       @RequestParam(value = "username") String username,
-      @RequestParam(value = "captured", required = false) boolean isCaptured) {
-    return ResponseEntity.ok(instagramService.extractFollowers(username, isCaptured));
+      @RequestParam(value = "timeout", defaultValue = "60", required = false) Integer timeout,
+      @RequestParam(value = "rounds", defaultValue = "5", required = false) Integer rounds) {
+    return ok(instagramService.extractFollowers(username, timeout, rounds));
   }
 
   @GetMapping("/following-details")
   public ResponseEntity<List<InstagramProfileDTO>> extractFollowingDetailsByUsername(
-      @RequestParam(value = "username") String username) {
-    return ResponseEntity.ok(instagramService.extractFollowing(username));
+      @RequestParam(value = "username") String username,
+      @RequestParam(value = "timeout", defaultValue = "60", required = false) Integer timeout,
+      @RequestParam(value = "rounds", defaultValue = "5", required = false) Integer rounds) {
+    return ok(instagramService.extractFollowing(username, timeout, rounds));
   }
 }

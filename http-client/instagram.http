@@ -21,16 +21,29 @@ Content-Type: application/json
 GET http://localhost:8080/api/v1/instagram/extract/profile-details?username=lesnik.pro
 Accept: application/json
 
-### Extract Feed Details
+### Extract Feed Details (default timeout = 60sec)
 GET http://localhost:8080/api/v1/instagram/extract/feed-details?username=chernova_dian
 Accept: application/json
 
-### Extract Followers Details
-GET http://localhost:8080/api/v1/instagram/extract/followers-details?username=tatarova_olya&captured=true
+### Extract Feed Details (custom timeout = 30sec)
+GET http://localhost:8080/api/v1/instagram/extract/feed-details?username=lesnik.pro&timeout=30&rounds=3&
+    nextMaxId=3201121392950483873_3401042491
 Accept: application/json
 
-### Extract Following Details
+### Extract Followers Details (default timeout = 60sec)
+GET http://localhost:8080/api/v1/instagram/extract/followers-details?username=lesnik.pro&rounds=1
+Accept: application/json
+
+### Extract Followers Details (custom timeout = 30sec)
+GET http://localhost:8080/api/v1/instagram/extract/followers-details?username=tatarova_olya&timeout=30
+Accept: application/json
+
+### Extract Following Details (default timeout = 60sec)
 GET http://localhost:8080/api/v1/instagram/extract/following-details?username=lesnik.pro
+Accept: application/json
+
+### Extract Following Details (custom timeout = 30sec)
+GET http://localhost:8080/api/v1/instagram/extract/following-details?username=lesnik.pro&timeout=30
 Accept: application/json
 
 ###
