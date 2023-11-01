@@ -29,25 +29,27 @@ public class InstagramExtractController {
   @GetMapping("/feed-details")
   public ResponseEntity<InstagramFeedDTO> extractFeedDetailsByUsername(
       @RequestParam(value = "username") String username,
-      @RequestParam(value = "nextMaxId", required = false) String nextMaxId,
       @RequestParam(value = "timeout", defaultValue = "60", required = false) Integer timeout,
-      @RequestParam(value = "rounds", defaultValue = "5", required = false) Integer rounds) {
-    return ok(instagramService.extractFeedDetails(username, nextMaxId, timeout, rounds));
+      @RequestParam(value = "rounds", defaultValue = "5", required = false) Integer rounds,
+      @RequestParam(value = "nextMaxId", required = false) String nextMaxId) {
+    return ok(instagramService.extractFeedDetails(username, timeout, rounds, nextMaxId));
   }
 
   @GetMapping("/followers-details")
   public ResponseEntity<List<InstagramProfileDTO>> extractFollowersDetailsByUsername(
       @RequestParam(value = "username") String username,
       @RequestParam(value = "timeout", defaultValue = "60", required = false) Integer timeout,
-      @RequestParam(value = "rounds", defaultValue = "5", required = false) Integer rounds) {
-    return ok(instagramService.extractFollowers(username, timeout, rounds));
+      @RequestParam(value = "rounds", defaultValue = "5", required = false) Integer rounds,
+      @RequestParam(value = "nextMaxId", required = false) String nextMaxId) {
+    return ok(instagramService.extractFollowers(username, timeout, rounds, nextMaxId));
   }
 
   @GetMapping("/following-details")
   public ResponseEntity<List<InstagramProfileDTO>> extractFollowingDetailsByUsername(
       @RequestParam(value = "username") String username,
       @RequestParam(value = "timeout", defaultValue = "60", required = false) Integer timeout,
-      @RequestParam(value = "rounds", defaultValue = "5", required = false) Integer rounds) {
-    return ok(instagramService.extractFollowing(username, timeout, rounds));
+      @RequestParam(value = "rounds", defaultValue = "5", required = false) Integer rounds,
+      @RequestParam(value = "nextMaxId", required = false) String nextMaxId) {
+    return ok(instagramService.extractFollowing(username, timeout, rounds, nextMaxId));
   }
 }

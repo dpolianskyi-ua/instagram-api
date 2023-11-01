@@ -1,5 +1,7 @@
 package com.example.mockmvcintframework.service;
 
+import static com.github.instagram4j.instagram4j.requests.friendships.FriendshipsFeedsRequest.FriendshipsFeeds.FOLLOWERS;
+import static com.github.instagram4j.instagram4j.requests.friendships.FriendshipsFeedsRequest.FriendshipsFeeds.FOLLOWING;
 import static com.github.instagram4j.instagram4j.utils.IGChallengeUtils.resolveTwoFactor;
 import static io.micrometer.common.util.StringUtils.isNotBlank;
 import static java.lang.String.*;
@@ -13,17 +15,20 @@ import static org.apache.commons.lang3.StringUtils.EMPTY;
 import com.example.mockmvcintframework.dto.InstagramCredentialsRequestDTO;
 import com.example.mockmvcintframework.dto.post.InstagramFeedDTO;
 import com.example.mockmvcintframework.dto.post.InstagramPostDTO;
+import com.example.mockmvcintframework.dto.post.InstagramPostDTO.InstagramPostDTOBuilder;
 import com.example.mockmvcintframework.dto.post.partial.LocationDetailsDTO;
 import com.example.mockmvcintframework.dto.profile.InstagramProfileCountsDTO;
 import com.example.mockmvcintframework.dto.profile.InstagramProfileDTO;
 import com.example.mockmvcintframework.dto.profile.InstagramProfileDTO.InstagramProfileDTOBuilder;
 import com.example.mockmvcintframework.dto.profile.InstagramProfilePictureDTO;
 import com.github.instagram4j.instagram4j.IGClient;
+import com.github.instagram4j.instagram4j.actions.feed.FeedIterable;
 import com.github.instagram4j.instagram4j.actions.users.UserAction;
-import com.github.instagram4j.instagram4j.models.location.Location;
 import com.github.instagram4j.instagram4j.models.media.timeline.*;
 import com.github.instagram4j.instagram4j.models.user.Profile;
 import com.github.instagram4j.instagram4j.requests.feed.FeedUserRequest;
+import com.github.instagram4j.instagram4j.requests.friendships.FriendshipsFeedsRequest;
+import com.github.instagram4j.instagram4j.requests.friendships.FriendshipsFeedsRequest.FriendshipsFeeds;
 import com.github.instagram4j.instagram4j.responses.feed.FeedUsersResponse;
 import java.util.*;
 import lombok.RequiredArgsConstructor;
@@ -82,7 +87,7 @@ public class InstagramService {
   }
 
   public InstagramFeedDTO extractFeedDetails(
-      String username, String nextMaxId, int timeout, int rounds) {
+      String username, int timeout, int rounds, String nextMaxId) {
     var user = getUserAction(username).getUser();
     var primaryKey = user.getPk();
     var items = new ArrayList<TimelineMedia>();
@@ -110,12 +115,18 @@ public class InstagramService {
         .build();
   }
 
-  public List<InstagramProfileDTO> extractFollowers(String username, int timeout, int rounds) {
-    return getFeedDetails(getUserAction(username).followersFeed().iterator(), timeout, rounds);
+  public List<InstagramProfileDTO> extractFollowers(
+      String username, int timeout, int rounds, String nextMaxId) {
+    var feedIterator = prepareFeedIterator(username, FOLLOWERS, nextMaxId);
+
+    return getFeedDetails(feedIterator, timeout, rounds);
   }
 
-  public List<InstagramProfileDTO> extractFollowing(String username, int timeout, int rounds) {
-    return getFeedDetails(getUserAction(username).followingFeed().iterator(), timeout, rounds);
+  public List<InstagramProfileDTO> extractFollowing(
+      String username, int timeout, int rounds, String nextMaxId) {
+    var feedIterator = prepareFeedIterator(username, FOLLOWING, nextMaxId);
+
+    return getFeedDetails(feedIterator, timeout, rounds);
   }
 
   @SneakyThrows
@@ -155,22 +166,18 @@ public class InstagramService {
             .commentCount(media.getComment_count())
             .takenAt(ofInstant(ofEpochSecond(media.getTaken_at()), getDefault().toZoneId()));
 
-    Location location = media.getLocation();
-
-    if (isNotEmpty(location)) {
-      postBuilder =
-          postBuilder.location(
-              LocationDetailsDTO.builder()
-                  .primaryKey(location.getPk())
-                  .name(location.getName())
-                  .externalSource(location.getExternal_source())
-                  .lat(location.getLat())
-                  .lon(location.getLng())
-                  .address(location.getAddress())
-                  .build());
-    }
+    postBuilder = fetchLocation(media, postBuilder);
 
     return timelineMediaService.prepare(media, postBuilder);
+  }
+
+  @NotNull
+  private Iterator<FeedUsersResponse> prepareFeedIterator(
+      String username, FriendshipsFeeds friendshipsFeeds, String nextMaxId) {
+    var pk = getUserAction(username).getUser().getPk();
+    var friendshipsFeedsRequest = new FriendshipsFeedsRequest(pk, friendshipsFeeds, nextMaxId);
+
+    return new FeedIterable<>(client, () -> friendshipsFeedsRequest).iterator();
   }
 
   @NotNull
@@ -198,6 +205,25 @@ public class InstagramService {
     log.info("[FEED_USER] List of Next Max IDs: " + join(", ", nextMaxIds));
 
     return new ArrayList<>(userDetailsDtos);
+  }
+
+  private InstagramPostDTOBuilder fetchLocation(
+      TimelineMedia media, InstagramPostDTOBuilder postBuilder) {
+    var location = media.getLocation();
+
+    if (isEmpty(location)) {
+      return postBuilder;
+    }
+
+    return postBuilder.location(
+        LocationDetailsDTO.builder()
+            .primaryKey(location.getPk())
+            .name(location.getName())
+            .externalSource(location.getExternal_source())
+            .lat(location.getLat())
+            .lon(location.getLng())
+            .address(location.getAddress())
+            .build());
   }
 
   @SneakyThrows

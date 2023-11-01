@@ -31,7 +31,7 @@ GET http://localhost:8080/api/v1/instagram/extract/feed-details?username=lesnik.
 Accept: application/json
 
 ### Extract Followers Details (default timeout = 60sec)
-GET http://localhost:8080/api/v1/instagram/extract/followers-details?username=lesnik.pro&rounds=1
+GET http://localhost:8080/api/v1/instagram/extract/followers-details?username=lesnik.pro&rounds=1&nextMaxId=QVFCZERYTnhMcEFqdEJSb1prVF9xbEF1cUpBSVByOTVVa2wxa2w5cUNvb3ZsR0NMcXdSSmd6a2QzVUpCekZHZTYyZjM2T1ctckljU0ZxQUFPNTAyZWdFQg==
 Accept: application/json
 
 ### Extract Followers Details (custom timeout = 30sec)
