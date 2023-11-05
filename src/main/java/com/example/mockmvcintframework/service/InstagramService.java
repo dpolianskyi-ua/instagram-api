@@ -9,10 +9,12 @@ import static java.time.Instant.*;
 import static java.time.LocalDateTime.*;
 import static java.util.Optional.ofNullable;
 import static java.util.TimeZone.*;
+import static java.util.concurrent.TimeUnit.*;
 import static org.apache.commons.lang3.ObjectUtils.*;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 
 import com.example.mockmvcintframework.dto.InstagramCredentialsRequestDTO;
+import com.example.mockmvcintframework.dto.InstagramRequestDTO;
 import com.example.mockmvcintframework.dto.post.InstagramFeedDTO;
 import com.example.mockmvcintframework.dto.post.InstagramPostDTO;
 import com.example.mockmvcintframework.dto.post.InstagramPostDTO.InstagramPostDTOBuilder;
@@ -44,22 +46,31 @@ public class InstagramService {
 
   private final InstagramTimelineMediaService timelineMediaService;
 
-  private IGClient client;
+  private IGClient igClient;
 
   @SneakyThrows
   public void initializeClient(InstagramCredentialsRequestDTO dto) {
+    var igClientBuilder =
+        IGClient.builder().username(dto.getUsername()).password(dto.getPassword());
+
     if (isNotBlank(dto.getInputCode())) {
-      client =
-          IGClient.builder()
-              .username(dto.getUsername())
-              .password(dto.getPassword())
-              .onTwoFactor(
-                  (igClient, loginResponse) ->
-                      resolveTwoFactor(igClient, loginResponse, dto::getInputCode))
-              .login();
-    } else {
-      client = IGClient.builder().username(dto.getUsername()).password(dto.getPassword()).login();
+      igClientBuilder =
+          igClientBuilder.onTwoFactor(
+              (client, response) -> resolveTwoFactor(client, response, dto::getInputCode));
     }
+
+    igClient = igClientBuilder.login();
+
+    var updatedOkHttpClient =
+        igClient
+            .getHttpClient()
+            .newBuilder()
+            .connectTimeout(30, SECONDS)
+            .readTimeout(90, SECONDS)
+            .writeTimeout(90, SECONDS)
+            .build();
+
+    igClient.setHttpClient(updatedOkHttpClient);
   }
 
   public InstagramProfileDTO extractProfileDetails(String username) {
@@ -86,10 +97,13 @@ public class InstagramService {
         .build();
   }
 
-  public InstagramFeedDTO extractFeedDetails(
-      String username, int timeout, int rounds, String nextMaxId) {
-    var user = getUserAction(username).getUser();
-    var primaryKey = user.getPk();
+  public InstagramFeedDTO extractFeedDetails(InstagramRequestDTO requestDto) {
+    var username = requestDto.getUsername();
+    var nextMaxId = requestDto.getNextMaxId();
+    var timeout = requestDto.getTimeout();
+    var rounds = requestDto.getRounds();
+
+    var primaryKey = getUserAction(username).getUser().getPk();
     var items = new ArrayList<TimelineMedia>();
     var nextMaxIds = new ArrayList<String>();
     var requestRounds = 0;
@@ -115,23 +129,21 @@ public class InstagramService {
         .build();
   }
 
-  public List<InstagramProfileDTO> extractFollowers(
-      String username, int timeout, int rounds, String nextMaxId) {
-    var feedIterator = prepareFeedIterator(username, FOLLOWERS, nextMaxId);
+  public List<InstagramProfileDTO> extractFollowers(InstagramRequestDTO requestDto) {
+    var feedIterator = prepareFeedIterator(requestDto, FOLLOWERS);
 
-    return getFeedDetails(feedIterator, timeout, rounds);
+    return getFeedDetails(requestDto, feedIterator);
   }
 
-  public List<InstagramProfileDTO> extractFollowing(
-      String username, int timeout, int rounds, String nextMaxId) {
-    var feedIterator = prepareFeedIterator(username, FOLLOWING, nextMaxId);
+  public List<InstagramProfileDTO> extractFollowing(InstagramRequestDTO requestDto) {
+    var feedIterator = prepareFeedIterator(requestDto, FOLLOWING);
 
-    return getFeedDetails(feedIterator, timeout, rounds);
+    return getFeedDetails(requestDto, feedIterator);
   }
 
   @SneakyThrows
   private UserAction getUserAction(String username) {
-    return client.actions().users().findByUsername(username).get();
+    return igClient.actions().users().findByUsername(username).get();
   }
 
   private <T extends Profile> InstagramProfileDTOBuilder buildCommonProfileDetails(T user) {
@@ -146,7 +158,7 @@ public class InstagramService {
       Long pk, String nextMaxId, List<TimelineMedia> items, int timeoutSec) {
     wait(timeoutSec);
 
-    var userFeed = new FeedUserRequest(pk, nextMaxId).execute(client).join();
+    var userFeed = new FeedUserRequest(pk, nextMaxId).execute(igClient).join();
 
     items.addAll(userFeed.getItems());
 
@@ -173,21 +185,23 @@ public class InstagramService {
 
   @NotNull
   private Iterator<FeedUsersResponse> prepareFeedIterator(
-      String username, FriendshipsFeeds friendshipsFeeds, String nextMaxId) {
+      InstagramRequestDTO requestDto, FriendshipsFeeds friendshipsFeeds) {
+    var username = requestDto.getUsername();
+    var nextMaxId = requestDto.getNextMaxId();
     var pk = getUserAction(username).getUser().getPk();
     var friendshipsFeedsRequest = new FriendshipsFeedsRequest(pk, friendshipsFeeds, nextMaxId);
 
-    return new FeedIterable<>(client, () -> friendshipsFeedsRequest).iterator();
+    return new FeedIterable<>(igClient, () -> friendshipsFeedsRequest).iterator();
   }
 
   @NotNull
   private List<InstagramProfileDTO> getFeedDetails(
-      Iterator<FeedUsersResponse> feedUserIterator, int timeout, int rounds) {
+      InstagramRequestDTO requestDto, Iterator<FeedUsersResponse> feedUserIterator) {
     var userDetailsDtos = new HashSet<InstagramProfileDTO>();
     var nextMaxIds = new ArrayList<String>();
     var requestRounds = 0;
 
-    while (feedUserIterator.hasNext() && requestRounds < rounds) {
+    while (feedUserIterator.hasNext() && requestRounds < requestDto.getRounds()) {
       FeedUsersResponse response = feedUserIterator.next();
 
       var preparedUserDetails =
@@ -199,7 +213,7 @@ public class InstagramService {
       nextMaxIds.add(response.getNext_max_id());
       userDetailsDtos.addAll(preparedUserDetails);
       requestRounds++;
-      wait(timeout);
+      wait(requestDto.getTimeout());
     }
 
     log.info("[FEED_USER] List of Next Max IDs: " + join(", ", nextMaxIds));
