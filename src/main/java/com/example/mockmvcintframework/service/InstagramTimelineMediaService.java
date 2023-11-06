@@ -1,10 +1,14 @@
 package com.example.mockmvcintframework.service;
 
 import static com.example.mockmvcintframework.dto.post.TimelineContentType.*;
+import static java.time.Instant.ofEpochSecond;
+import static java.time.LocalDateTime.ofInstant;
+import static java.util.Optional.ofNullable;
+import static java.util.TimeZone.getDefault;
+import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.springframework.util.CollectionUtils.isEmpty;
 
 import com.example.mockmvcintframework.dto.post.InstagramPostDTO;
-import com.example.mockmvcintframework.dto.post.InstagramPostDTO.InstagramPostDTOBuilder;
 import com.example.mockmvcintframework.dto.post.partial.*;
 import com.github.instagram4j.instagram4j.models.media.timeline.*;
 import lombok.RequiredArgsConstructor;
@@ -16,26 +20,55 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class InstagramTimelineMediaService {
 
-  public InstagramPostDTO prepare(TimelineMedia media, InstagramPostDTOBuilder postBuilder) {
+  public InstagramPostDTO prepare(TimelineMedia media) {
+    var post = prepareBasePost(media);
+
     if (media instanceof TimelineCarouselMedia) {
-      return prepareCarousel((TimelineCarouselMedia) media, postBuilder);
+      return prepareCarousel((TimelineCarouselMedia) media, post);
     } else if (media instanceof TimelineImageMedia) {
-      return prepareImage((TimelineImageMedia) media, postBuilder);
+      return prepareImage((TimelineImageMedia) media, post);
     } else if (media instanceof TimelineVideoMedia) {
-      return prepareVideo((TimelineVideoMedia) media, postBuilder);
+      return prepareVideo((TimelineVideoMedia) media, post);
     } else {
-      return postBuilder.contentType(NA).build();
+      return post.withContentType(NA);
     }
   }
 
-  private InstagramPostDTO prepareImage(
-      TimelineImageMedia media, InstagramPostDTOBuilder postBuilder) {
+  private InstagramPostDTO prepareBasePost(TimelineMedia media) {
+    var postBuilder =
+        InstagramPostDTO.builder()
+            .primaryKey(media.getPk())
+            .captionText(ofNullable(media.getCaption()).map(Comment::getText).orElse(EMPTY))
+            .likeCount(media.getLike_count())
+            .commentCount(media.getComment_count())
+            .takenAt(ofInstant(ofEpochSecond(media.getTaken_at()), getDefault().toZoneId()))
+            .build();
+
+    return (media.getLocation() == null)
+        ? postBuilder
+        : postBuilder.withLocation(getLocation(media));
+  }
+
+  private LocationDetailsDTO getLocation(TimelineMedia media) {
+    var location = media.getLocation();
+
+    return LocationDetailsDTO.builder()
+        .primaryKey(location.getPk())
+        .name(location.getName())
+        .externalSource(location.getExternal_source())
+        .lat(location.getLat())
+        .lon(location.getLng())
+        .address(location.getAddress())
+        .build();
+  }
+
+  private InstagramPostDTO prepareImage(TimelineImageMedia media, InstagramPostDTO post) {
     var imageVersionsMetas = media.getCandidates();
 
     if (isEmpty(imageVersionsMetas)) {
       log.warn("No image detected. TimelineImageMedia: [{}]", media);
 
-      return postBuilder.contentType(IMAGE).build();
+      return post.withContentType(IMAGE);
     } else {
       var primaryMeta = imageVersionsMetas.get(0);
 
@@ -47,18 +80,17 @@ public class InstagramTimelineMediaService {
               .url(primaryMeta.getUrl())
               .build();
 
-      return postBuilder.contentType(IMAGE).image(imageDetails).build();
+      return post.withContentType(IMAGE).withImage(imageDetails);
     }
   }
 
-  private InstagramPostDTO prepareVideo(
-      TimelineVideoMedia media, InstagramPostDTOBuilder postBuilder) {
+  private InstagramPostDTO prepareVideo(TimelineVideoMedia media, InstagramPostDTO post) {
     var videoVersionsMetas = media.getVideo_versions();
 
     if (isEmpty(videoVersionsMetas)) {
       log.warn("No video detected. TimelineVideoMedia: [{}]", media);
 
-      return postBuilder.contentType(VIDEO).build();
+      return post.withContentType(VIDEO);
     } else {
       var primaryMeta = videoVersionsMetas.get(0);
 
@@ -71,12 +103,11 @@ public class InstagramTimelineMediaService {
               .url(primaryMeta.getUrl())
               .build();
 
-      return postBuilder.contentType(VIDEO).video(videoDetails).build();
+      return post.withContentType(VIDEO).withVideo(videoDetails);
     }
   }
 
-  private InstagramPostDTO prepareCarousel(
-      TimelineCarouselMedia media, InstagramPostDTOBuilder postBuilder) {
+  private InstagramPostDTO prepareCarousel(TimelineCarouselMedia media, InstagramPostDTO post) {
     var carouselItems =
         media.getCarousel_media().stream()
             .map(
@@ -101,7 +132,7 @@ public class InstagramTimelineMediaService {
             .items(carouselItems)
             .build();
 
-    return postBuilder.contentType(CAROUSEL).carousel(carouselDetails).build();
+    return post.withContentType(CAROUSEL).withCarousel(carouselDetails);
   }
 
   private CarouselItemDTO prepareImageCarouselItem(

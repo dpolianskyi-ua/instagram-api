@@ -1,5 +1,7 @@
 package com.example.mockmvcintframework.controller;
 
+import static com.github.instagram4j.instagram4j.requests.friendships.FriendshipsFeedsRequest.FriendshipsFeeds.FOLLOWERS;
+import static com.github.instagram4j.instagram4j.requests.friendships.FriendshipsFeedsRequest.FriendshipsFeeds.FOLLOWING;
 import static org.springframework.http.ResponseEntity.*;
 
 import com.example.mockmvcintframework.dto.InstagramRequestDTO;
@@ -35,11 +37,11 @@ public class InstagramExtractController {
 
   @GetMapping("/followers-details")
   public ResponseEntity<List<InstagramProfileDTO>> getFollowers(@Valid InstagramRequestDTO dto) {
-    return ok(instagramService.extractFollowers(dto));
+    return ok(instagramService.extractUserProfiles(dto, FOLLOWERS));
   }
 
   @GetMapping("/following-details")
   public ResponseEntity<List<InstagramProfileDTO>> getFollowing(@Valid InstagramRequestDTO dto) {
-    return ok(instagramService.extractFollowing(dto));
+    return ok(instagramService.extractUserProfiles(dto, FOLLOWING));
   }
 }

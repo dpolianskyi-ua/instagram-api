@@ -9,40 +9,40 @@ import com.example.mockmvcintframework.dto.post.partial.VideoPostDetailsDTO;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.LocalDateTime;
-import lombok.Builder;
-import lombok.Data;
+import lombok.*;
 
-@Data
-@Builder(toBuilder = true)
+@Value
+@Builder
+@With
 @JsonInclude(NON_NULL)
 public class InstagramPostDTO {
   @JsonProperty("primaryKey")
-  private Long primaryKey;
+  Long primaryKey;
 
   @JsonProperty("contentType")
-  private TimelineContentType contentType;
+  TimelineContentType contentType;
 
   @JsonProperty("captionText")
-  private String captionText;
+  String captionText;
 
   @JsonProperty("location")
-  private LocationDetailsDTO location;
+  LocationDetailsDTO location;
 
   @JsonProperty("takenAt")
-  private LocalDateTime takenAt;
+  LocalDateTime takenAt;
 
   @JsonProperty("likeCount")
-  private Integer likeCount;
+  Integer likeCount;
 
   @JsonProperty("commentCount")
-  private Integer commentCount;
+  Integer commentCount;
 
   @JsonProperty("image")
-  private ImagePostDetailsDTO image;
+  ImagePostDetailsDTO image;
 
   @JsonProperty("video")
-  private VideoPostDetailsDTO video;
+  VideoPostDetailsDTO video;
 
   @JsonProperty("carousel")
-  private CarouselPostDetailsDTO carousel;
+  CarouselPostDetailsDTO carousel;
 }

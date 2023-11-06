@@ -1,24 +1,13 @@
 package com.example.mockmvcintframework.service;
 
-import static com.github.instagram4j.instagram4j.requests.friendships.FriendshipsFeedsRequest.FriendshipsFeeds.FOLLOWERS;
-import static com.github.instagram4j.instagram4j.requests.friendships.FriendshipsFeedsRequest.FriendshipsFeeds.FOLLOWING;
 import static com.github.instagram4j.instagram4j.utils.IGChallengeUtils.resolveTwoFactor;
 import static io.micrometer.common.util.StringUtils.isNotBlank;
 import static java.lang.String.*;
-import static java.time.Instant.*;
-import static java.time.LocalDateTime.*;
-import static java.util.Optional.ofNullable;
-import static java.util.TimeZone.*;
 import static java.util.concurrent.TimeUnit.*;
-import static org.apache.commons.lang3.ObjectUtils.*;
-import static org.apache.commons.lang3.StringUtils.EMPTY;
 
 import com.example.mockmvcintframework.dto.InstagramCredentialsRequestDTO;
 import com.example.mockmvcintframework.dto.InstagramRequestDTO;
 import com.example.mockmvcintframework.dto.post.InstagramFeedDTO;
-import com.example.mockmvcintframework.dto.post.InstagramPostDTO;
-import com.example.mockmvcintframework.dto.post.InstagramPostDTO.InstagramPostDTOBuilder;
-import com.example.mockmvcintframework.dto.post.partial.LocationDetailsDTO;
 import com.example.mockmvcintframework.dto.profile.InstagramProfileCountsDTO;
 import com.example.mockmvcintframework.dto.profile.InstagramProfileDTO;
 import com.example.mockmvcintframework.dto.profile.InstagramProfileDTO.InstagramProfileDTOBuilder;
@@ -101,7 +90,7 @@ public class InstagramService {
     var username = requestDto.getUsername();
     var nextMaxId = requestDto.getNextMaxId();
     var timeout = requestDto.getTimeout();
-    var rounds = requestDto.getRounds();
+    var rounds = (nextMaxId != null) ? requestDto.getRounds() : requestDto.getRounds() - 1;
 
     var primaryKey = getUserAction(username).getUser().getPk();
     var items = new ArrayList<TimelineMedia>();
@@ -111,7 +100,6 @@ public class InstagramService {
     if (nextMaxId == null) {
       // 1st request
       nextMaxId = getNextTimelineMedia(primaryKey, null, items, timeout);
-      rounds--;
       nextMaxIds.add(nextMaxId);
     }
 
@@ -125,20 +113,36 @@ public class InstagramService {
     log.info("[TIMELINE_MEDIA] List of Next Max IDs: " + join(", ", nextMaxIds));
 
     return InstagramFeedDTO.builder()
-        .posts(items.stream().map(this::populatePostDetails).toList())
+        .posts(items.stream().map(timelineMediaService::prepare).toList())
         .build();
   }
 
-  public List<InstagramProfileDTO> extractFollowers(InstagramRequestDTO requestDto) {
-    var feedIterator = prepareFeedIterator(requestDto, FOLLOWERS);
+  public List<InstagramProfileDTO> extractUserProfiles(
+      InstagramRequestDTO requestDto, FriendshipsFeeds friendshipsFeeds) {
+    var userDetailsDtos = new HashSet<InstagramProfileDTO>();
+    var nextMaxIds = new ArrayList<String>();
+    var requestRounds = 0;
 
-    return getFeedDetails(requestDto, feedIterator);
-  }
+    var feedIterator = prepareFeedIterator(requestDto, friendshipsFeeds);
 
-  public List<InstagramProfileDTO> extractFollowing(InstagramRequestDTO requestDto) {
-    var feedIterator = prepareFeedIterator(requestDto, FOLLOWING);
+    while (feedIterator.hasNext() && requestRounds < requestDto.getRounds()) {
+      FeedUsersResponse response = feedIterator.next();
 
-    return getFeedDetails(requestDto, feedIterator);
+      var preparedUserDetails =
+          response.getUsers().stream()
+              .map(this::buildCommonProfileDetails)
+              .map(InstagramProfileDTOBuilder::build)
+              .toList();
+
+      nextMaxIds.add(response.getNext_max_id());
+      userDetailsDtos.addAll(preparedUserDetails);
+      requestRounds++;
+      wait(requestDto.getTimeout());
+    }
+
+    log.info("[FEED_USER] List of Next Max IDs: " + join(", ", nextMaxIds));
+
+    return new ArrayList<>(userDetailsDtos);
   }
 
   @SneakyThrows
@@ -169,20 +173,6 @@ public class InstagramService {
     return followingNextMaxId;
   }
 
-  private InstagramPostDTO populatePostDetails(TimelineMedia media) {
-    var postBuilder =
-        InstagramPostDTO.builder()
-            .primaryKey(media.getPk())
-            .captionText(ofNullable(media.getCaption()).map(Comment::getText).orElse(EMPTY))
-            .likeCount(media.getLike_count())
-            .commentCount(media.getComment_count())
-            .takenAt(ofInstant(ofEpochSecond(media.getTaken_at()), getDefault().toZoneId()));
-
-    postBuilder = fetchLocation(media, postBuilder);
-
-    return timelineMediaService.prepare(media, postBuilder);
-  }
-
   @NotNull
   private Iterator<FeedUsersResponse> prepareFeedIterator(
       InstagramRequestDTO requestDto, FriendshipsFeeds friendshipsFeeds) {
@@ -192,52 +182,6 @@ public class InstagramService {
     var friendshipsFeedsRequest = new FriendshipsFeedsRequest(pk, friendshipsFeeds, nextMaxId);
 
     return new FeedIterable<>(igClient, () -> friendshipsFeedsRequest).iterator();
-  }
-
-  @NotNull
-  private List<InstagramProfileDTO> getFeedDetails(
-      InstagramRequestDTO requestDto, Iterator<FeedUsersResponse> feedUserIterator) {
-    var userDetailsDtos = new HashSet<InstagramProfileDTO>();
-    var nextMaxIds = new ArrayList<String>();
-    var requestRounds = 0;
-
-    while (feedUserIterator.hasNext() && requestRounds < requestDto.getRounds()) {
-      FeedUsersResponse response = feedUserIterator.next();
-
-      var preparedUserDetails =
-          response.getUsers().stream()
-              .map(this::buildCommonProfileDetails)
-              .map(InstagramProfileDTOBuilder::build)
-              .toList();
-
-      nextMaxIds.add(response.getNext_max_id());
-      userDetailsDtos.addAll(preparedUserDetails);
-      requestRounds++;
-      wait(requestDto.getTimeout());
-    }
-
-    log.info("[FEED_USER] List of Next Max IDs: " + join(", ", nextMaxIds));
-
-    return new ArrayList<>(userDetailsDtos);
-  }
-
-  private InstagramPostDTOBuilder fetchLocation(
-      TimelineMedia media, InstagramPostDTOBuilder postBuilder) {
-    var location = media.getLocation();
-
-    if (isEmpty(location)) {
-      return postBuilder;
-    }
-
-    return postBuilder.location(
-        LocationDetailsDTO.builder()
-            .primaryKey(location.getPk())
-            .name(location.getName())
-            .externalSource(location.getExternal_source())
-            .lat(location.getLat())
-            .lon(location.getLng())
-            .address(location.getAddress())
-            .build());
   }
 
   @SneakyThrows
